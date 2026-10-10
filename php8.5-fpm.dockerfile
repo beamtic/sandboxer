@@ -9,6 +9,7 @@ RUN apk add --no-cache \
         fcgi \
         sqlite \
         php85-pdo_sqlite \
+        php85-pdo_pgsql \
         imagemagick \
         imagemagick-pdf \
         imagemagick-jpeg \
