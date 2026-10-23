@@ -5,8 +5,14 @@ root=${SANDBOXER_ROOT:-/srv/sandboxer}
 template=${LARAVEL_TEMPLATE:-/opt/laravel}
 target="$root/laravel"
 
+# Symlinks are not supported as installation destinations; leave removal to the user.
+if [ -L "$target" ]; then
+    echo 'www/laravel is a symlink. Remove it or configure a bind mount before installing.' >&2
+    exit 1
+fi
+
 # An existing app belongs to the developer: never reinstall or migrate it.
-if [ -e "$target" ] || [ -L "$target" ]; then
+if [ -e "$target" ]; then
     echo "Laravel destination already exists; leaving it unchanged."
     exit 0
 fi

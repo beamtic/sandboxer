@@ -7,8 +7,14 @@ root=${SANDBOXER_ROOT:-/srv/sandboxer}
 template=${DEFAULT_TEMPLATE:-/opt/default}
 destination="$root/default"
 
-# Do not follow a developer-provided link or replace a conflicting file.
-if [ -L "$destination" ] || { [ -e "$destination" ] && [ ! -d "$destination" ]; }; then
+# Symlinks are not supported as installation destinations; leave removal to the user.
+if [ -L "$destination" ]; then
+    echo 'www/default is a symlink. Remove it or configure a bind mount before installing.' >&2
+    exit 1
+fi
+
+# Do not replace a conflicting file.
+if [ -e "$destination" ] && [ ! -d "$destination" ]; then
     echo "Default site destination is not a regular directory; leaving it unchanged."
     exit 0
 fi

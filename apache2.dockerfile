@@ -11,6 +11,7 @@ RUN apk add --no-cache \
 
 # Load the generic localhost site first so it remains the fallback virtual host.
 COPY ./config/apache2/conf.d/sandboxer.conf /etc/apache2/conf.d/000-sandboxer.conf
+COPY ./config/apache2/conf.d/wordpress.conf /etc/apache2/conf.d/wordpress.conf
 COPY ./config/apache2/conf.d/laravel.conf /etc/apache2/conf.d/laravel.conf
 COPY ./config/apache2/conf.d/phpmyadmin.conf /etc/apache2/conf.d/phpmyadmin.conf
 COPY ./config/apache2/conf.d/hedgedoc.conf /etc/apache2/conf.d/hedgedoc.conf

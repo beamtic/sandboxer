@@ -219,6 +219,13 @@
                 <span class="arrow">→</span>
             </a>
 
+            <a class="card beamtic" href="http://wordpress.localhost">
+                <div class="icon">W</div>
+                <h2>WordPress</h2>
+                <p>Develop local WordPress themes and plugins.</p>
+                <span class="arrow">→</span>
+            </a>
+
             <a class="card beamtic" href="https://beamtic.com">
                 <div class="icon">B</div>
                 <h2>Beamtic.com</h2>

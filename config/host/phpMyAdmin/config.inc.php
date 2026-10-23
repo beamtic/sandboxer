@@ -26,11 +26,29 @@ $i = 0;
 $i++;
 /* Authentication type */
 $cfg['Servers'][$i]['auth_type'] = 'config';
-$cfg['Servers'][$i]['user'] = 'sandboxer';
-$cfg['Servers'][$i]['password'] = 'localuserpassword';
+$cfg['Servers'][$i]['user'] = getenv('MYSQL_USER');
+$cfg['Servers'][$i]['password'] = getenv('MYSQL_PASSWORD');
 /* Server parameters */
-$cfg['Servers'][$i]['host'] = 'db'; // Use the hostname from docker-compose (service name unique only to this docker-compose project)
+$cfg['Servers'][$i]['host'] = getenv('MYSQL_HOST'); // Use the hostname from docker-compose (service name unique only to this docker-compose project)
 $cfg['Servers'][$i]['compress'] = false;
+$cfg['Servers'][$i]['AllowNoPassword'] = false;
+
+// Separate saved connections keep each application's account scoped to its database.
+$cfg['Servers'][$i]['verbose'] = 'Sandbox';
+$i++;
+$cfg['Servers'][$i]['verbose'] = 'WordPress';
+$cfg['Servers'][$i]['auth_type'] = 'config';
+$cfg['Servers'][$i]['host'] = getenv('MYSQL_HOST');
+$cfg['Servers'][$i]['user'] = getenv('WORDPRESS_DB_USER');
+$cfg['Servers'][$i]['password'] = getenv('WORDPRESS_DB_PASSWORD');
+$cfg['Servers'][$i]['AllowNoPassword'] = false;
+
+$i++;
+$cfg['Servers'][$i]['verbose'] = 'HedgeDoc';
+$cfg['Servers'][$i]['auth_type'] = 'config';
+$cfg['Servers'][$i]['host'] = getenv('MYSQL_HOST');
+$cfg['Servers'][$i]['user'] = getenv('HEDGEDOC_DB_USER');
+$cfg['Servers'][$i]['password'] = getenv('HEDGEDOC_DB_PASSWORD');
 $cfg['Servers'][$i]['AllowNoPassword'] = false;
 
 /**

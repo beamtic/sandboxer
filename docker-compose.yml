@@ -1,7 +1,5 @@
 volumes:
   node_modules:
-  mariadb:
-    driver: local
   hedgedoc_public:
     driver: local
 
@@ -46,10 +44,10 @@ services:
       timeout: 5s
       retries: 12
     environment:
-      MYSQL_ROOT_PASSWORD: superduperroot
-      MYSQL_DATABASE: sandbox
-      MYSQL_USER:  sandboxer
-      MYSQL_PASSWORD: localuserpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Copy .env.example to .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE in .env}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
     ports:
         - "127.0.0.1:3306:3306"
     volumes:
@@ -57,6 +55,47 @@ services:
      - ./iedata:/srv/iedata
     networks:
       sandboxer:
+  # Creates the dedicated database/account, then exits. Safe to rerun.
+  wordpress-db-setup:
+    image: sandboxer-php
+    build:
+      context: ./
+      dockerfile: php8.5-fpm.dockerfile
+    entrypoint: [php, /application-database.php]
+    command: [WORDPRESS]
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:?Set WORDPRESS_DB_NAME in .env}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:?Set WORDPRESS_DB_USER in .env}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:?Set WORDPRESS_DB_PASSWORD in .env}
+    volumes:
+      - ./config/install-scripts/application-database.php:/application-database.php:ro
+    networks:
+      - sandboxer
+    depends_on:
+      db:
+        condition: service_healthy
+  hedgedoc-db-setup:
+    image: sandboxer-php
+    build:
+      context: ./
+      dockerfile: php8.5-fpm.dockerfile
+    entrypoint: [php, /application-database.php]
+    command: [HEDGEDOC]
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      HEDGEDOC_DB_NAME: ${HEDGEDOC_DB_NAME:?Set HEDGEDOC_DB_NAME in .env}
+      HEDGEDOC_DB_USER: ${HEDGEDOC_DB_USER:?Set HEDGEDOC_DB_USER in .env}
+      HEDGEDOC_DB_PASSWORD: ${HEDGEDOC_DB_PASSWORD:?Set HEDGEDOC_DB_PASSWORD in .env}
+    volumes:
+      - ./config/install-scripts/application-database.php:/application-database.php:ro
+    networks:
+      - sandboxer
+    depends_on:
+      db:
+        condition: service_healthy
   php:
     build:
       context: ./
@@ -73,9 +112,15 @@ services:
     environment:
       MYSQL_HOST: db
       MYSQL_PORT: "3306"
-      MYSQL_DATABASE: sandbox
-      MYSQL_USER: sandboxer
-      MYSQL_PASSWORD: localuserpassword
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE in .env}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:?Set WORDPRESS_DB_NAME in .env}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:?Set WORDPRESS_DB_USER in .env}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:?Set WORDPRESS_DB_PASSWORD in .env}
+      HEDGEDOC_DB_NAME: ${HEDGEDOC_DB_NAME:?Set HEDGEDOC_DB_NAME in .env}
+      HEDGEDOC_DB_USER: ${HEDGEDOC_DB_USER:?Set HEDGEDOC_DB_USER in .env}
+      HEDGEDOC_DB_PASSWORD: ${HEDGEDOC_DB_PASSWORD:?Set HEDGEDOC_DB_PASSWORD in .env}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "/bin/sh", "/usr/local/bin/php-fpm-healthcheck"]
@@ -86,8 +131,6 @@ services:
   apache2:
     ports:
       - "127.0.0.1:80:80" # Publish only on the host's IPv4 loopback interface.
-      - "127.0.0.1:443:443"
-      - "127.0.0.1:8000:8000"
     networks:
       - sandboxer
     build:
@@ -102,6 +145,8 @@ services:
     depends_on:
       setup:
         condition: service_completed_successfully
+      wordpress-db-setup:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       php:
@@ -114,7 +159,12 @@ services:
       context: .
       dockerfile: hedgedoc.dockerfile
     environment:
-      CMD_DB_URL: sqlite:///data/hedgedoc.sqlite
+      CMD_DB_DIALECT: mariadb
+      CMD_DB_HOST: db
+      CMD_DB_PORT: "3306"
+      CMD_DB_DATABASE: ${HEDGEDOC_DB_NAME:?Set HEDGEDOC_DB_NAME in .env}
+      CMD_DB_USERNAME: ${HEDGEDOC_DB_USER:?Set HEDGEDOC_DB_USER in .env}
+      CMD_DB_PASSWORD: ${HEDGEDOC_DB_PASSWORD:?Set HEDGEDOC_DB_PASSWORD in .env}
       CMD_DOMAIN: hedgedoc.localhost
       CMD_HOST: 0.0.0.0
       CMD_PROTOCOL_USESSL: "false"
@@ -129,6 +179,8 @@ services:
       - sandboxer
     restart: unless-stopped
     depends_on:
+      hedgedoc-db-setup:
+        condition: service_completed_successfully
       setup:
         condition: service_completed_successfully
   hedgedoc-setup:
@@ -141,9 +193,14 @@ services:
     healthcheck:
       disable: true
     environment:
-      CMD_DB_URL: sqlite:///data/hedgedoc.sqlite
+      CMD_DB_DIALECT: mariadb
+      CMD_DB_HOST: db
+      CMD_DB_PORT: "3306"
+      CMD_DB_DATABASE: ${HEDGEDOC_DB_NAME:?Set HEDGEDOC_DB_NAME in .env}
+      CMD_DB_USERNAME: ${HEDGEDOC_DB_USER:?Set HEDGEDOC_DB_USER in .env}
+      CMD_DB_PASSWORD: ${HEDGEDOC_DB_PASSWORD:?Set HEDGEDOC_DB_PASSWORD in .env}
       CMD_DOMAIN: hedgedoc.localhost
-      SANDBOXER_HEDGEDOC_PASSWORD: localuserpassword
+      SANDBOXER_HEDGEDOC_PASSWORD: ${HEDGEDOC_PASSWORD:?Set HEDGEDOC_PASSWORD in .env}
     volumes:
       - hedgedoc_public:/data
       - ./config/install-scripts/hedgedoc-user.js:/hedgedoc/create-sandboxer-user.js:ro
