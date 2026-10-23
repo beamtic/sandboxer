@@ -38,7 +38,7 @@ to your hosts file with address `127.0.0.1`.
 The local HedgeDoc account is `sandboxer@sandboxer.localhost`, with password
 `localuserpassword`. Setup creates it if missing and preserves existing passwords.
 
-The `setup`, `wordpress-db-setup`, and `hedgedoc-setup` services finish and exit successfully; this is
+The `setup`, `wordpress-db-setup`, `hedgedoc-db-setup`, and `hedgedoc-setup` services finish and exit successfully; this is
 normal. If startup fails, check:
 
 ```sh
@@ -51,7 +51,7 @@ Stop the environment with `docker compose stop`. Start it again with
 ## Developing Profundarium
 
 Edit `www/profundarium` on your host; the containers use those files directly.
-Profundarium shares HedgeDoc's notes and uploads, and a note's public view is at
+Profundarium's public note view is at
 `http://hedgedoc.localhost/profundarium/<note-id>`.
 
 New installations start from a pinned `main` checkout. To work on Profundarium,
@@ -72,6 +72,11 @@ docker compose exec -w /srv/sandboxer/profundarium php composer test
 
 HedgeDoc data is read-only in PHP. Commands that delete uploads need an
 intentional writable mount in your local Compose override.
+
+HedgeDoc now uses MariaDB (`hedgedoc_sandbox`), configured with `HEDGEDOC_DB_*`
+in the root `.env`. Profundarium currently supports SQLite and PostgreSQL;
+its MariaDB support is pending, so it cannot yet display notes from this HedgeDoc
+database. Its existing SQLite configuration is unchanged.
 
 ## Developing a Laravel application
 
@@ -158,7 +163,7 @@ HedgeDoc accounts. Existing application configurations are preserved by setup.
 
 ## Database and saved data
 
-phpMyAdmin offers separate Sandbox and WordPress connections. The Sandbox
+phpMyAdmin offers separate Sandbox, WordPress, and HedgeDoc connections. The Sandbox
 connection logs in as `sandboxer` to the `sandbox` database with password
 `localuserpassword`. Host database clients connect to `127.0.0.1:3306`;
 applications inside the stack use `db:3306`. For database administration:
@@ -175,14 +180,15 @@ account can manage its own database but cannot access `sandbox`. It has all
 privileges within its database so installation and plugin migrations can work;
 testing a more restricted runtime account requires narrower grants.
 
-Both accounts' credentials are available in the shared PHP container. Code running
-there can use either account, so separate database users do not isolate these
+All three accounts' credentials are available in the shared PHP container. Code running
+there can use any of these accounts, so separate database users do not isolate these
 applications from each other. They let you test database privileges when using
 the intended application account.
 
 - Application files live in `www/`.
 - MariaDB data lives in `dbdata/`; `iedata/` is available for import/export files.
-- HedgeDoc's SQLite database and uploads live in the `hedgedoc_public` named volume.
+- HedgeDoc's MariaDB database lives in `dbdata/`; uploads remain in the
+  `hedgedoc_public` named volume. Any old SQLite file there is left untouched.
 - Apache and PHP logs live under `log/`; other service logs use `docker compose logs`.
 
 Stopping or recreating containers preserves this data. Back it up before removing

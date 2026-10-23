@@ -25,6 +25,12 @@ workspace remains available for clean Laravel applications.
 See README.md for setup and usage; keep personal environment history out of
 project documentation.
 
+## Pending application compatibility
+
+HedgeDoc uses its dedicated MariaDB database. Profundarium still supports only
+SQLite/PostgreSQL; adding MariaDB support is a separate requested follow-up.
+Its setup and local database configuration are unchanged until then.
+
 ## Remaining review candidates
 
 These are not authorization to make additional changes:

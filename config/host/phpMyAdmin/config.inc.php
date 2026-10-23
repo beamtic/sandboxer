@@ -43,6 +43,14 @@ $cfg['Servers'][$i]['user'] = getenv('WORDPRESS_DB_USER');
 $cfg['Servers'][$i]['password'] = getenv('WORDPRESS_DB_PASSWORD');
 $cfg['Servers'][$i]['AllowNoPassword'] = false;
 
+$i++;
+$cfg['Servers'][$i]['verbose'] = 'HedgeDoc';
+$cfg['Servers'][$i]['auth_type'] = 'config';
+$cfg['Servers'][$i]['host'] = getenv('MYSQL_HOST');
+$cfg['Servers'][$i]['user'] = getenv('HEDGEDOC_DB_USER');
+$cfg['Servers'][$i]['password'] = getenv('HEDGEDOC_DB_PASSWORD');
+$cfg['Servers'][$i]['AllowNoPassword'] = false;
+
 /**
  * phpMyAdmin configuration storage settings.
  */

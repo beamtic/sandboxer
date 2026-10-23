@@ -67,7 +67,8 @@ image changes. Use `docker compose up -d --build <service>` to apply changes;
 relevant service logs. Apache's startup dependencies gate initial readiness;
 they do not automatically restart it when a dependency later becomes unhealthy.
 
-`wordpress-db-setup` reuses the PHP image to provision WordPress's database and
+`wordpress-db-setup` and `hedgedoc-db-setup` reuse the PHP image and
+`application-database.php` to provision each application's database and
 account after MariaDB becomes healthy, then exits. It also works with existing
 MariaDB data. Reruns preserve passwords and tables; changed passwords require an
 explicit account update. PHP receives the WordPress account, never the root password.
