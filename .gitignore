@@ -52,3 +52,6 @@ __pycache__/
 
 # Reproducible dependencies for the generated Laravel example
 !config/laravel/composer.lock
+
+# Administrator-managed local static files
+/static/

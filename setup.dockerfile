@@ -1,12 +1,28 @@
+# Shared base: Alpine and the PHP packages needed by the build stages and setup.
+# AS names a stage so later FROM and COPY instructions can refer to it.
 FROM alpine:3.24.2 AS setup-base
 RUN apk add --no-cache \
         shadow bash \
-        php85 php85-ctype php85-curl php85-dom php85-fileinfo \
+        "php85>=8.5.12" php85-ctype php85-curl php85-dom php85-fileinfo \
         php85-mbstring php85-openssl php85-pdo_sqlite php85-session \
         php85-tokenizer php85-xml php85-xmlwriter php85-phar php85-zip \
         php85-pcntl php85-posix
 
-# Build the example once; first-run setup needs no Composer or Laravel download.
+# Download and verify phpMyAdmin at build time. Only the extracted application
+# is copied into the final image; download/extraction tools stay in this stage.
+FROM alpine:3.24.2 AS phpmyadmin-template
+RUN apk add --no-cache curl unzip
+# Official all-languages ZIP checksum; update alongside the pinned version.
+# https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.zip.sha256
+RUN curl -fsSLo /tmp/phpmyadmin.zip https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.zip \
+    && echo '2d2e13c735366d318425c78e4ee2cc8fc648d77faba3ddea2cd516e43885733f  /tmp/phpmyadmin.zip' | sha256sum -c - \
+    && unzip -q /tmp/phpmyadmin.zip -d /opt \
+    && mv /opt/phpMyAdmin-5.2.3-all-languages /opt/phpmyadmin \
+    && test -f /opt/phpmyadmin/index.php \
+    && rm /tmp/phpmyadmin.zip
+
+# Start from setup-base and prepare the clean Laravel example in /opt/laravel.
+# Build it once so first-run setup needs no Composer or Laravel download.
 FROM setup-base AS laravel-template
 RUN apk add --no-cache curl unzip
 RUN curl -fsSLo /usr/local/bin/composer https://getcomposer.org/download/2.10.3/composer.phar && \
@@ -23,15 +39,39 @@ RUN COMPOSER_ALLOW_SUPERUSER=1 php85 /usr/local/bin/composer install \
     php85 /usr/local/bin/composer check-platform-reqs
 COPY ./config/laravel/vite.config.js ./vite.config.js
 
+# Inherit laravel-template to reuse its PHP, Composer, and download tools.
+# Inheritance makes the entire earlier filesystem available here, including
+# /opt/laravel. That example is not copied into or used to create Profundarium.
+# Instead, fetch Profundarium's own source from the remote repository below
+# at a pinned commit, then install its dependencies in /opt/profundarium.
+FROM laravel-template AS profundarium-template
+RUN apk add --no-cache git
+# Main-branch snapshot for new installs; existing local checkouts are untouched.
+ARG PROFUNDARIUM_REF=7b3d8462e60be4c5c2a4b59e59bc5aa61c154b3d
+WORKDIR /opt/profundarium
+RUN git init . && git remote add origin https://github.com/beamtic/Profundarium.git \
+    && git fetch --depth=1 origin "${PROFUNDARIUM_REF}" \
+    && git checkout -b main FETCH_HEAD \
+    && git update-ref refs/remotes/origin/main HEAD \
+    && git branch --set-upstream-to=origin/main main
+RUN COMPOSER_ALLOW_SUPERUSER=1 php85 /usr/local/bin/composer install \
+    --prefer-dist --no-interaction --no-progress --no-scripts --no-plugins
+
+# Final setup image: start from the shared base, not a template stage.
+# Copy only the prepared applications below; Composer, Git, curl, and unzip
+# stay in the build stages. The setup scripts install missing apps into www/.
 FROM setup-base
 # Run bind-mount setup with its numeric owner; no passwd/group entries needed.
 RUN apk add --no-cache su-exec
 COPY ./config/install-scripts/setup-entrypoint.sh /setup-entrypoint.sh
+COPY --from=phpmyadmin-template /opt/phpmyadmin /opt/phpmyadmin
 COPY --from=laravel-template /opt/laravel /opt/laravel
+COPY --from=profundarium-template /opt/profundarium /opt/profundarium
 COPY ./config/install-scripts/phpmyadmin.sh /phpmyadmin.sh
 COPY ./config/install-scripts/laravel.sh /laravel.sh
+COPY ./config/install-scripts/profundarium.sh /profundarium.sh
 COPY ./config/install-scripts/setup.sh /setup.sh
-COPY ./config/install-scripts/default.sh /default.sh
+COPY ./config/install-scripts/sandboxer-site.sh /sandboxer-site.sh
 COPY ./config/host/default/ /opt/default/
 COPY ./config/host/phpMyAdmin/config.inc.php /
 ENTRYPOINT ["/bin/sh", "/setup-entrypoint.sh"]

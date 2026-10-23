@@ -4,8 +4,8 @@ RUN apk add --no-cache \
         shadow \
         su-exec \
         curl \
-        php85 \
-        php85-fpm \
+        "php85>=8.5.12" \
+        "php85-fpm>=8.5.12" \
         fcgi \
         sqlite \
         php85-pdo_sqlite \

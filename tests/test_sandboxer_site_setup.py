@@ -1,11 +1,11 @@
-"""Default site setup must fill missing files without changing developer files."""
+"""Sandboxer landing-page setup preserves existing developer files."""
 import os
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
 
-SCRIPT = Path(__file__).resolve().parents[1] / 'config/install-scripts/default.sh'
+SCRIPT = Path(__file__).resolve().parents[1] / 'config/install-scripts/sandboxer-site.sh'
 
 
 class DefaultSetupTests(unittest.TestCase):

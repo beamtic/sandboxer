@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
-/bin/sh /default.sh
+/bin/sh /sandboxer-site.sh
 /bin/sh /phpmyadmin.sh
 /bin/sh /laravel.sh
+/bin/sh /profundarium.sh

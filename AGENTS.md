@@ -122,6 +122,24 @@ Prefer targeted file reads and searches over broad repository exploration.
 
 Do not read documentation, configuration, or source files merely to gather general context. Read them when they are relevant to the current task.
 
+## Branch workflow
+
+Use `develop` for future Sandboxer code changes and commits. Do not create
+feature branches for routine work unless requested.
+
+Before editing, check the current branch, working tree, and whether `develop`
+contains the latest main changes. Preserve existing work when switching branches;
+never discard it or force-push to resolve a mismatch.
+
+Push Sandboxer changes only to `origin develop` unless the user explicitly
+requests another target. Main is normally updated through a pull request.
+Explicit permission for one main-branch commit or push is a one-time exception,
+not permission to use main for later work. Commit, push, merge, and release only
+when requested.
+
+These rules apply to Sandboxer's repository. Applications under `www/` have
+their own repositories and branch instructions (Profundarium uses `development`).
+
 ## Working rules
 
 Before changing behavior, inspect only the files and configuration relevant to the change.

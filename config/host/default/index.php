@@ -205,6 +205,13 @@
                 <span class="arrow">→</span>
             </a>
 
+            <a class="card laravel" href="http://hedgedoc.localhost/profundarium/">
+                <div class="icon">P</div>
+                <h2>Profundarium</h2>
+                <p>Develop the public reading view for HedgeDoc notes.</p>
+                <span class="arrow">→</span>
+            </a>
+
             <a class="card hedgedoc" href="http://hedgedoc.localhost">
                 <div class="icon">H</div>
                 <h2>HedgeDoc</h2>

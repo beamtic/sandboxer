@@ -3,9 +3,7 @@ set -eu
 
 destination=${SANDBOXER_ROOT:-/srv/sandboxer}
 configuration=${PHPMYADMIN_CONFIG:-/config.inc.php}
-# Official all-languages ZIP checksum; update alongside the pinned version.
-# https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.zip.sha256
-archive_sha256=2d2e13c735366d318425c78e4ee2cc8fc648d77faba3ddea2cd516e43885733f
+template=${PHPMYADMIN_TEMPLATE:-/opt/phpmyadmin}
 
 if [ -f "$destination/setup-completed" ]; then
     echo "Setup not requested... Exiting setup..."
@@ -21,6 +19,7 @@ if [ -e "$destination/phpmyadmin" ] || [ -L "$destination/phpmyadmin" ]; then
 fi
 
 test -f "$configuration"
+test -f "$template/index.php"
 mkdir -p "$destination"
 staging=$(mktemp -d "$destination/.phpmyadmin-setup.XXXXXX")
 # Remove temporary files when the shell exits, whether setup succeeds or fails.
@@ -30,12 +29,15 @@ trap 'rm -rf "$staging"' EXIT
 # Forced termination (SIGKILL) or power loss cannot be caught for cleanup.
 trap 'exit 1' HUP INT TERM
 
-wget -O "$staging/phpmyadmin.zip" https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.zip
-# Reject incomplete or altered downloads before extracting any files.
-printf '%s  %s\n' "$archive_sha256" "$staging/phpmyadmin.zip" | sha256sum -c -
-unzip -q "$staging/phpmyadmin.zip" -d "$staging"
-test -f "$staging/phpMyAdmin-5.2.3-all-languages/index.php"
-cp "$configuration" "$staging/phpMyAdmin-5.2.3-all-languages/config.inc.php"
-mv "$staging/phpMyAdmin-5.2.3-all-languages" "$destination/phpmyadmin"
+# The image already contains the verified application. Stage a complete install
+# beside its destination so a failed copy never publishes partial files.
+mkdir "$staging/app"
+cp -R "$template/." "$staging/app/"
+cp "$configuration" "$staging/app/config.inc.php"
+if [ -e "$destination/phpmyadmin" ] || [ -L "$destination/phpmyadmin" ]; then
+    echo "phpmyadmin appeared during setup; refusing to replace it." >&2
+    exit 1
+fi
+mv -T "$staging/app" "$destination/phpmyadmin"
 touch "$destination/setup-completed"
 echo "Setup complete."

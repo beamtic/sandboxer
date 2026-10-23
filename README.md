@@ -41,6 +41,7 @@ The `root` password is `superduperroot`.
 - To open the default website (`www/default`), open `http://localhost`.
 - To open the generated Laravel example (`www/laravel`), open `http://laravel.localhost`.
 - To open HedgeDoc, open `http://hedgedoc.localhost`.
+- To develop Profundarium (`www/profundarium`), open `http://hedgedoc.localhost/profundarium/`.
 
 Published ports bind to `127.0.0.1` (IPv4 loopback) for access from the Docker host.
 For a database client on the host, connect to `127.0.0.1:3306`; containers continue
@@ -58,8 +59,8 @@ Use `docker compose ps` to confirm published ports show `127.0.0.1`.
 
 ## Startup readiness
 
-Apache starts after setup exits successfully and MariaDB and PHP-FPM report
-healthy. MariaDB checks connectivity and InnoDB initialization; PHP checks an
+Apache starts after setup exits successfully and MariaDB, PHP-FPM, and HedgeDoc
+report healthy. MariaDB checks connectivity and InnoDB initialization; PHP checks an
 FPM worker's built-in ping response using Alpine's small `fcgi` client.
 
 Use `docker compose ps -a` to see health and setup exit status. If startup is
@@ -224,9 +225,10 @@ appropriate shared permissions. The worker cannot modify root-owned container
 configuration, but it can modify application files accessible to the mount owner.
 `docker compose exec php ...` still runs CLI commands as root by default.
 
-## Default site setup
+## Sandboxer landing page setup
 
-On every setup run, `index.php` and `beamtic-sandboxer.png` from
+On every setup run, `sandboxer-site.sh` copies `index.php` and
+`beamtic-sandboxer.png` from
 `config/host/default/` are copied to `www/default/` only if missing. Existing files,
 including edited pages, are preserved. Existing symlinks are left alone. This
 step runs independently of the phpMyAdmin completion marker.
@@ -309,39 +311,73 @@ in `setup.dockerfile`, regenerate its Composer lockfile with PHP 8.5, and review
 `config/laravel/vite.config.js` against the new skeleton. Rebuild and test a fresh
 installation; existing applications remain the developer's responsibility.
 
-## HedgeDoc
+## HedgeDoc and Profundarium
 
-The normal `docker compose up` flow also starts HedgeDoc 1.12.0 at
-`http://hedgedoc.localhost`. Apache proxies the application and its WebSocket
-connection through the shared `sandboxer` network. HedgeDoc uses SQLite for this
-local setup, and the named `hedgedoc_public` volume stores its database and
-filesystem uploads at `/hedgedoc/public`. Apache serves `/uploads/` directly
-from that volume, while HedgeDoc handles the rest of the application. The
-volume is retained when the container is recreated; remove it explicitly only
-when you want to discard HedgeDoc data.
+The standard stack includes one HedgeDoc instance, built from
+[Turbulentarius's HedgeDoc fork](https://github.com/Turbulentarius/hedgedoc), and
+a separate Profundarium source checkout at `www/profundarium`. The clean Laravel
+example remains independent at `www/laravel`.
 
-The setup flow creates the default local account `sandboxer@sandboxer.localhost` with the
-password `localuserpassword`. The account is created only when it does not
-already exist, so rerunning setup does not reset its password.
+- `http://hedgedoc.localhost`: create and edit Markdown notes.
+- `http://hedgedoc.localhost/profundarium/<note-id>`: follow the fork's public-view link.
+- `http://hedgedoc.localhost/profundarium/`: develop and view Profundarium.
+- `http://laravel.localhost`: develop unrelated Laravel applications.
 
-Check account setup with `docker compose logs hedgedoc-setup` and
-`docker compose ps -a hedgedoc-setup`; successful setup exits with code 0.
-To retry without restarting HedgeDoc, run:
+Apache serves Profundarium through Sandboxer's shared PHP-FPM container. There
+is no separate packaged Profundarium service, second HedgeDoc, or PostgreSQL
+service in the default stack.
 
-```bash
+The HedgeDoc image builds commit `90212dc04003741393d19b2c90a4cba2f81b8a7b`
+from the fork on Alpine Node.js 24. Native modules and frontend assets are built
+in a separate stage; Git, compilers, and development dependencies stay out of
+the runtime image. To select another tested fork commit, set HEDGEDOC_REF under
+the service's build args or pass `--build-arg HEDGEDOC_REF=<commit>` when building.
+
+The existing `hedgedoc_public` volume preserves the SQLite database and uploads.
+HedgeDoc mounts it at `/data`, so it does not hide the image's compiled public
+assets. Apache and PHP mount the same volume read-only at `/hedgedoc/public`.
+Apache serves `/uploads/` directly. No database or upload volume is deleted when
+services are recreated.
+
+First-run setup installs a pinned Profundarium `main` checkout with Composer
+dependencies, a local application key, and a connection to the shared HedgeDoc
+SQLite database. Existing `www/profundarium` directories are left unchanged.
+The pinned source commit is configured as PROFUNDARIUM_REF in `setup.dockerfile`;
+the checkout tracks `origin/main`, so users can run `git pull` to update it.
+Setup leaves existing checkouts and their selected branches unchanged.
+To develop Profundarium, explicitly switch branches:
+
+```sh
+cd www/profundarium
+git fetch origin
+git switch development
+```
+
+Run application commands from Sandboxer's root with:
+
+```sh
+docker compose exec -w /srv/sandboxer/profundarium php composer test
+docker compose exec -w /srv/sandboxer/profundarium php php artisan media:unused
+```
+
+The data volume is read-only in PHP: listing media works, while deleting uploads
+requires an intentional writable mount in a local override.
+
+The local HedgeDoc account is `sandboxer@sandboxer.localhost`, with password
+`localuserpassword`. The one-shot `hedgedoc-setup` service creates it only if
+missing; it never resets an existing password.
+
+```sh
+docker compose logs hedgedoc-setup
 docker compose run --rm --no-deps hedgedoc-setup
 ```
 
-The script preserves existing accounts and passwords. Creating a missing account
-requires `SANDBOXER_HEDGEDOC_PASSWORD`; a missing password or database failure exits
-with code 1. Setup explicitly exits after closing the database because HedgeDoc's
-model imports can leave a child process running.
+To run the isolated account-setup tests:
 
-Run the isolated script tests without starting any services:
-
-```bash
+```sh
 docker compose run --rm --no-deps --entrypoint node -v ./tests:/tests:ro hedgedoc-setup --test /tests/test_hedgedoc_user.cjs
 ```
+
 
 ## MariaDB version
 
@@ -376,9 +412,10 @@ phpMyAdmin connects automatically as `sandboxer`, with access to the `sandbox`
 database. Use the root CLI login above for server-wide administration.
 
 The setup service installs phpMyAdmin 5.2.3 only when `www/setup-completed` is absent.
-The downloaded ZIP is verified against a pinned SHA-256 checksum before extraction.
-Download, checksum, extraction, or configuration errors stop setup without writing that
-marker. Temporary installation files are cleaned up on normal exit or failure.
+The setup image downloads and verifies the pinned ZIP in its `phpmyadmin-template`
+build stage. Starting containers needs no phpMyAdmin download. At startup, setup
+copies the prepared files and local configuration into place. Copy or configuration
+errors stop setup without writing the marker; temporary files are cleaned up.
 After fixing the cause, retry with `docker compose run --rm setup`.
 Rebuild script changes first with `docker compose build setup`.
 
@@ -387,25 +424,24 @@ and setup stops for inspection. Move that directory aside before retrying if
 you want a fresh installation. Existing completion markers are still honored;
 this change does not repair or upgrade previous installations automatically.
 
-For isolated script checks, `SANDBOXER_ROOT` and `PHPMYADMIN_CONFIG` can override
-the destination and configuration source. Their container defaults are
-`/srv/sandboxer` and `/config.inc.php`.
+For isolated script checks, SANDBOXER_ROOT, PHPMYADMIN_TEMPLATE, and
+PHPMYADMIN_CONFIG override the destination, prepared application, and configuration.
+Their defaults are `/srv/sandboxer`, `/opt/phpmyadmin`, and `/config.inc.php`.
 
 ## Testing the setup installers
 
 Run the tests after changing a setup script or its tests, before committing.
-They require Python 3, a POSIX shell, `sha256sum`, and `unzip` on your host. From the
+They require Python 3 and a POSIX shell on your host. From the
 repository root:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 ```
 
-Expect eighteen tests reporting `ok`, followed by `OK`. They check phpMyAdmin
-checksum verification and the setup scripts' failure handling, retries, cleanup,
+The tests check the setup scripts' failure handling, retries, cleanup,
 and preservation of existing files, symlinks, application keys, and databases.
 
-The tests use temporary directories, a fake phpMyAdmin download, and simulated
+The tests use temporary directories, prepared application fixtures, and simulated
 Laravel initialization commands. They are safe to run
 with phpMyAdmin installed and do not touch your application or database data.
 They are not needed during normal use and do not replace testing the real
@@ -426,5 +462,5 @@ exercise Docker Desktop file sharing or a real rootless daemon.
 ### Profundarium asset URLs
 
 Profundarium stores its CSS and fonts under `public/profundarium/assets/`.
-The Laravel virtual host serves these directly at `/profundarium/assets/`;
+The Profundarium virtual host serves these directly at `/profundarium/assets/`;
 no asset alias is required.

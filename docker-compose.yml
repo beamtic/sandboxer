@@ -69,6 +69,7 @@ services:
     volumes:
       - ./www:/srv/sandboxer # Mount a "www" directory on the host that is shared with the web server. E.g. Apache or Nginx
       - ./log/php:/var/log/php85 # Mount the log file directory to a place on host so we can access the log files
+      - hedgedoc_public:/hedgedoc/public:ro
     environment:
       MYSQL_HOST: db
       MYSQL_PORT: "3306"
@@ -105,19 +106,25 @@ services:
         condition: service_healthy
       php:
         condition: service_healthy
+      hedgedoc:
+        condition: service_healthy
   hedgedoc:
-    image: quay.io/hedgedoc/hedgedoc:1.12.0
+    image: sandboxer-hedgedoc
+    build:
+      context: .
+      dockerfile: hedgedoc.dockerfile
     environment:
-      CMD_DB_URL: sqlite:///hedgedoc/public/hedgedoc.sqlite
+      CMD_DB_URL: sqlite:///data/hedgedoc.sqlite
       CMD_DOMAIN: hedgedoc.localhost
       CMD_HOST: 0.0.0.0
       CMD_PROTOCOL_USESSL: "false"
       CMD_URL_ADDPORT: "false"
       CMD_IMAGE_UPLOAD_TYPE: filesystem
       CMD_ENABLE_UPLOADS: all
-      UPLOADS_MODE: "0755"
+      CMD_SOURCE_URL: https://github.com/Turbulentarius/hedgedoc
+      CMD_PORT: "3000"
     volumes:
-      - hedgedoc_public:/hedgedoc/public
+      - hedgedoc_public:/data
     networks:
       - sandboxer
     restart: unless-stopped
@@ -125,18 +132,20 @@ services:
       setup:
         condition: service_completed_successfully
   hedgedoc-setup:
-    image: quay.io/hedgedoc/hedgedoc:1.12.0
+    image: sandboxer-hedgedoc
+    # Reuse the fork image built by hedgedoc, never pull a same-named registry image.
+    pull_policy: never
     user: hedgedoc
     entrypoint: [node]
     command: [/hedgedoc/create-sandboxer-user.js]
     healthcheck:
       disable: true
     environment:
-      CMD_DB_URL: sqlite:///hedgedoc/public/hedgedoc.sqlite
+      CMD_DB_URL: sqlite:///data/hedgedoc.sqlite
       CMD_DOMAIN: hedgedoc.localhost
       SANDBOXER_HEDGEDOC_PASSWORD: localuserpassword
     volumes:
-      - hedgedoc_public:/hedgedoc/public
+      - hedgedoc_public:/data
       - ./config/install-scripts/hedgedoc-user.js:/hedgedoc/create-sandboxer-user.js:ro
     networks:
       - sandboxer
