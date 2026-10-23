@@ -73,10 +73,13 @@ docker compose exec -w /srv/sandboxer/profundarium php composer test
 HedgeDoc data is read-only in PHP. Commands that delete uploads need an
 intentional writable mount in your local Compose override.
 
-HedgeDoc now uses MariaDB (`hedgedoc_sandbox`), configured with `HEDGEDOC_DB_*`
-in the root `.env`. Profundarium currently supports SQLite and PostgreSQL;
-its MariaDB support is pending, so it cannot yet display notes from this HedgeDoc
-database. Its existing SQLite configuration is unchanged.
+Profundarium's current development code supports MariaDB for media commands;
+note rendering uses HedgeDoc's HTTP API. Sandboxer's pinned installation snapshot
+still uses SQLite until that source pin is updated. For a checkout with MariaDB
+support, set `HEDGEDOC_DB_CONNECTION=mysql`, host `db`, and port `3306` in its
+application `.env`. Use `${HEDGEDOC_DB_NAME}`, `${HEDGEDOC_DB_USER}`, and
+`${HEDGEDOC_DB_PASSWORD}` for its database, username, and password values;
+Sandboxer's PHP container supplies these from the root `.env`.
 
 ## Developing a Laravel application
 
