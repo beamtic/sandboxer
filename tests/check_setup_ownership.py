@@ -34,7 +34,7 @@ exec /bin/sh /setup-entrypoint.sh /bin/sh -c '
 set -eu
 test "$(id -u):$(id -g)" = 12345:23456
 /bin/sh /setup.sh
-for path in default/index.php phpmyadmin/index.php phpmyadmin/config.inc.php setup-completed laravel/.env laravel/database/database.sqlite profundarium/.env profundarium/.git/HEAD; do
+for path in default/index.php phpmyadmin/index.php phpmyadmin/config.inc.php wordpress/wp-config.php wordpress/wp-settings.php laravel/.env laravel/database/database.sqlite profundarium/.env profundarium/.git/HEAD; do
     test "$(stat -c %u:%g /srv/sandboxer/$path)" = 12345:23456
     test -w /srv/sandboxer/$path
 done

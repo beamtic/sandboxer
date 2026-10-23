@@ -1,7 +1,7 @@
 # Sandboxer
 
 Sandboxer is a Docker Compose workshop for local web development with Apache,
-PHP-FPM, MariaDB, and phpMyAdmin. It includes a clean Laravel application and
+PHP-FPM, MariaDB, and phpMyAdmin. It includes WordPress, a clean Laravel application, and
 Profundarium alongside [our HedgeDoc fork](https://github.com/Turbulentarius/hedgedoc)
 for editing and publishing Markdown notes.
 
@@ -13,6 +13,7 @@ to `127.0.0.1`, and the included passwords are development credentials.
 Install Docker with Compose v2 and Git. From your Sandboxer checkout:
 
 ```sh
+cp .env.example .env
 mkdir -p www
 docker compose up -d --build
 docker compose ps -a
@@ -25,6 +26,7 @@ and prepares the applications, so it can take a while.
 | Application | URL | Source directory |
 | --- | --- | --- |
 | Sandboxer start page | http://localhost | `www/default` |
+| WordPress | http://wordpress.localhost | `www/wordpress` |
 | Laravel | http://laravel.localhost | `www/laravel` |
 | HedgeDoc | http://hedgedoc.localhost | Built into its image |
 | Profundarium | http://hedgedoc.localhost/profundarium/ | `www/profundarium` |
@@ -36,7 +38,7 @@ to your hosts file with address `127.0.0.1`.
 The local HedgeDoc account is `sandboxer@sandboxer.localhost`, with password
 `localuserpassword`. Setup creates it if missing and preserves existing passwords.
 
-The `setup` and `hedgedoc-setup` services finish and exit successfully; this is
+The `setup`, `wordpress-db-setup`, and `hedgedoc-setup` services finish and exit successfully; this is
 normal. If startup fails, check:
 
 ```sh
@@ -105,10 +107,22 @@ Application directories under `www/` are ignored by Sandboxer's Git repository;
 manage your applications in their own repositories. Setup leaves existing Laravel
 and Profundarium directories unchanged, including their dependencies and branches.
 
+## Developing WordPress
+
+Setup prepares WordPress 7.1.3 in `www/wordpress`. Open
+http://wordpress.localhost to choose your site title and administrator credentials
+and finish installation. It uses its own `wordpress_sandbox` MariaDB database and `wordpress` account,
+configured through `WORDPRESS_DB_*` in the root `.env`. Select the WordPress
+connection in phpMyAdmin to browse it.
+
+Develop themes and plugins under `www/wordpress/wp-content/`. Existing WordPress
+directories are left unchanged; rebuilding Sandboxer does not upgrade them.
+WordPress's own update tools remain available after installation.
+
 ## Optional frontend development
 
 Node runs separately from PHP. The default project is `www/laravel`; to select
-another project, copy the root `.env.example` to `.env` and set `APP_PATH` to its
+another project, set `APP_PATH` in the root `.env` to its
 path relative to `www/`. This file is separate from your application's `.env`.
 
 ```sh
@@ -132,9 +146,20 @@ selected project's dependencies, and recreate the service with `up -d node`.
 Run Composer/Artisan through PHP and npm through Node, rather than using Laravel
 scripts that expect both tools in one container.
 
+## Development settings
+
+The root `.env.example` contains public development defaults. Copy it to `.env`
+once and edit that ignored file for local settings. Compose reads the database
+credentials and initial HedgeDoc password from it. It is separate from application
+`.env` files under `www/`.
+
+Changing these values does not reset passwords in existing MariaDB databases or
+HedgeDoc accounts. Existing application configurations are preserved by setup.
+
 ## Database and saved data
 
-phpMyAdmin connects as `sandboxer` to the `sandbox` database with password
+phpMyAdmin offers separate Sandbox and WordPress connections. The Sandbox
+connection logs in as `sandboxer` to the `sandbox` database with password
 `localuserpassword`. Host database clients connect to `127.0.0.1:3306`;
 applications inside the stack use `db:3306`. For database administration:
 
@@ -144,6 +169,16 @@ docker compose exec db mariadb -uroot -p
 
 The development root password is `superduperroot`. Initial database credentials
 apply when MariaDB creates a new database directory, not to existing databases.
+
+Separate database accounts let you test application permissions: the WordPress
+account can manage its own database but cannot access `sandbox`. It has all
+privileges within its database so installation and plugin migrations can work;
+testing a more restricted runtime account requires narrower grants.
+
+Both accounts' credentials are available in the shared PHP container. Code running
+there can use either account, so separate database users do not isolate these
+applications from each other. They let you test database privileges when using
+the intended application account.
 
 - Application files live in `www/`.
 - MariaDB data lives in `dbdata/`; `iedata/` is available for import/export files.

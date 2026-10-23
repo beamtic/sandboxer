@@ -11,9 +11,9 @@ files define custom images; service configuration and installers live in `config
 Custom images use Alpine. Native dependencies must support musl or be built for it;
 keep compilers and other build-only tools out of runtime images where practical.
 
-`setup.dockerfile` prepares phpMyAdmin, Laravel, and Profundarium in build stages.
+`setup.dockerfile` prepares phpMyAdmin, WordPress, Laravel, and Profundarium in build stages.
 Runtime installers copy missing applications into the host-mounted `www/`.
-Existing Laravel, Profundarium, and phpMyAdmin directories are preserved. Each
+Existing Laravel, Profundarium, WordPress, and phpMyAdmin directories are preserved. Each
 installer stages a complete application before moving it into place; no separate
 completion marker is needed. The landing-page installer copies only
 missing files from `config/host/default/`.
@@ -66,3 +66,8 @@ image changes. Use `docker compose up -d --build <service>` to apply changes;
 `restart` alone does not apply Compose changes. Check `docker compose ps -a` and
 relevant service logs. Apache's startup dependencies gate initial readiness;
 they do not automatically restart it when a dependency later becomes unhealthy.
+
+`wordpress-db-setup` reuses the PHP image to provision WordPress's database and
+account after MariaDB becomes healthy, then exits. It also works with existing
+MariaDB data. Reruns preserve passwords and tables; changed passwords require an
+explicit account update. PHP receives the WordPress account, never the root password.

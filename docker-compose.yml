@@ -46,10 +46,10 @@ services:
       timeout: 5s
       retries: 12
     environment:
-      MYSQL_ROOT_PASSWORD: superduperroot
-      MYSQL_DATABASE: sandbox
-      MYSQL_USER:  sandboxer
-      MYSQL_PASSWORD: localuserpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Copy .env.example to .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE in .env}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
     ports:
         - "127.0.0.1:3306:3306"
     volumes:
@@ -57,6 +57,26 @@ services:
      - ./iedata:/srv/iedata
     networks:
       sandboxer:
+  # Creates the dedicated database/account, then exits. Safe to rerun.
+  wordpress-db-setup:
+    image: sandboxer-php
+    build:
+      context: ./
+      dockerfile: php8.5-fpm.dockerfile
+    entrypoint: [php, /wordpress-database.php]
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:?Set WORDPRESS_DB_NAME in .env}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:?Set WORDPRESS_DB_USER in .env}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:?Set WORDPRESS_DB_PASSWORD in .env}
+    volumes:
+      - ./config/install-scripts/wordpress-database.php:/wordpress-database.php:ro
+    networks:
+      - sandboxer
+    depends_on:
+      db:
+        condition: service_healthy
   php:
     build:
       context: ./
@@ -73,9 +93,12 @@ services:
     environment:
       MYSQL_HOST: db
       MYSQL_PORT: "3306"
-      MYSQL_DATABASE: sandbox
-      MYSQL_USER: sandboxer
-      MYSQL_PASSWORD: localuserpassword
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE in .env}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:?Set WORDPRESS_DB_NAME in .env}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:?Set WORDPRESS_DB_USER in .env}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:?Set WORDPRESS_DB_PASSWORD in .env}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "/bin/sh", "/usr/local/bin/php-fpm-healthcheck"]
@@ -101,6 +124,8 @@ services:
     restart: unless-stopped
     depends_on:
       setup:
+        condition: service_completed_successfully
+      wordpress-db-setup:
         condition: service_completed_successfully
       db:
         condition: service_healthy
@@ -143,7 +168,7 @@ services:
     environment:
       CMD_DB_URL: sqlite:///data/hedgedoc.sqlite
       CMD_DOMAIN: hedgedoc.localhost
-      SANDBOXER_HEDGEDOC_PASSWORD: localuserpassword
+      SANDBOXER_HEDGEDOC_PASSWORD: ${HEDGEDOC_PASSWORD:?Set HEDGEDOC_PASSWORD in .env}
     volumes:
       - hedgedoc_public:/data
       - ./config/install-scripts/hedgedoc-user.js:/hedgedoc/create-sandboxer-user.js:ro

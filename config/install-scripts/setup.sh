@@ -4,3 +4,4 @@ set -eu
 /bin/sh /phpmyadmin.sh
 /bin/sh /laravel.sh
 /bin/sh /profundarium.sh
+/bin/sh /wordpress.sh

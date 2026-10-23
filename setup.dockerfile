@@ -21,6 +21,17 @@ RUN curl -fsSLo /tmp/phpmyadmin.zip https://files.phpmyadmin.net/phpMyAdmin/5.2.
     && test -f /opt/phpmyadmin/index.php \
     && rm /tmp/phpmyadmin.zip
 
+# Pin the official WordPress archive and verify its locally recorded SHA-256.
+# Downloads stay in this build stage; runtime setup only copies prepared files.
+FROM alpine:3.24.2 AS wordpress-template
+RUN apk add --no-cache curl
+RUN curl -fsSLo /tmp/wordpress.tar.gz https://wordpress.org/wordpress-7.1.3.tar.gz \
+    && echo 'd2a09acb6a15e3b9c471d72557753c266d6f41a79ed19bfe04cbfe49e283b2a5  /tmp/wordpress.tar.gz' | sha256sum -c - \
+    && mkdir -p /opt \
+    && tar -xzf /tmp/wordpress.tar.gz -C /opt \
+    && test -f /opt/wordpress/wp-settings.php \
+    && rm /tmp/wordpress.tar.gz
+
 # Start from setup-base and prepare the clean Laravel example in /opt/laravel.
 # Build it once so first-run setup needs no Composer or Laravel download.
 FROM setup-base AS laravel-template
@@ -64,10 +75,12 @@ FROM setup-base
 # Run bind-mount setup with its numeric owner; no passwd/group entries needed.
 RUN apk add --no-cache su-exec
 COPY ./config/install-scripts/setup-entrypoint.sh /setup-entrypoint.sh
+COPY --from=wordpress-template /opt/wordpress /opt/wordpress
 COPY --from=phpmyadmin-template /opt/phpmyadmin /opt/phpmyadmin
 COPY --from=laravel-template /opt/laravel /opt/laravel
 COPY --from=profundarium-template /opt/profundarium /opt/profundarium
 COPY ./config/install-scripts/phpmyadmin.sh /phpmyadmin.sh
+COPY ./config/install-scripts/wordpress.sh /wordpress.sh
 COPY ./config/install-scripts/laravel.sh /laravel.sh
 COPY ./config/install-scripts/profundarium.sh /profundarium.sh
 COPY ./config/install-scripts/setup.sh /setup.sh
