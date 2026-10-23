@@ -42,13 +42,21 @@ class SetupTests(unittest.TestCase):
     def test_success_and_repeat_preserves_changes(self):
         result = self.run_setup()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.destination / 'setup-completed').is_file())
+        self.assertFalse((self.destination / 'setup-completed').exists())
         app = self.destination / 'phpmyadmin'
         self.assertEqual((app / 'config.inc.php').read_bytes(), self.config.read_bytes())
         (app / 'index.php').write_text('developer edit')
         self.config.unlink()
         self.assertEqual(self.run_setup().returncode, 0)
         self.assertEqual((app / 'index.php').read_text(), 'developer edit')
+
+    def test_obsolete_marker_does_not_skip_missing_installation(self):
+        marker = self.destination / 'setup-completed'
+        marker.write_text('legacy marker')
+        result = self.run_setup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.destination / 'phpmyadmin/index.php').is_file())
+        self.assertEqual(marker.read_text(), 'legacy marker')
 
     def test_missing_template_then_retry(self):
         index = self.template / 'index.php'
@@ -83,13 +91,13 @@ class SetupTests(unittest.TestCase):
         installed.mkdir()
         existing = installed / 'keep.txt'
         existing.write_text('existing data')
-        self.assert_failed()
+        self.assertEqual(self.run_setup().returncode, 0)
         self.assertEqual(existing.read_text(), 'existing data')
 
     def test_existing_symlink_is_preserved(self):
         installed = self.destination / 'phpmyadmin'
         installed.symlink_to(self.root / 'missing')
-        self.assert_failed()
+        self.assertEqual(self.run_setup().returncode, 0)
         self.assertTrue(installed.is_symlink())
 
 

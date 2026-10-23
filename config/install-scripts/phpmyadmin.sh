@@ -5,18 +5,13 @@ destination=${SANDBOXER_ROOT:-/srv/sandboxer}
 configuration=${PHPMYADMIN_CONFIG:-/config.inc.php}
 template=${PHPMYADMIN_TEMPLATE:-/opt/phpmyadmin}
 
-if [ -f "$destination/setup-completed" ]; then
-    echo "Setup not requested... Exiting setup..."
+# Existing applications belong to the developer; never reinstall or upgrade.
+if [ -e "$destination/phpmyadmin" ] || [ -L "$destination/phpmyadmin" ]; then
+    echo "phpMyAdmin already exists; leaving it unchanged."
     exit 0
 fi
 
-echo "Running setup..."
-
-# Preserve existing installations instead of merging a retry into their files.
-if [ -e "$destination/phpmyadmin" ] || [ -L "$destination/phpmyadmin" ]; then
-    echo "phpmyadmin exists without a completion marker; inspect it before retrying." >&2
-    exit 1
-fi
+echo "Installing phpMyAdmin..."
 
 test -f "$configuration"
 test -f "$template/index.php"
@@ -39,5 +34,4 @@ if [ -e "$destination/phpmyadmin" ] || [ -L "$destination/phpmyadmin" ]; then
     exit 1
 fi
 mv -T "$staging/app" "$destination/phpmyadmin"
-touch "$destination/setup-completed"
 echo "Setup complete."
