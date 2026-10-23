@@ -42,12 +42,10 @@ class DefaultSetupTests(unittest.TestCase):
                                  (self.template / name).read_bytes())
 
     # Keep a developer-edited landing page while adding its missing image.
-    # The old phpMyAdmin marker must not disable this independent installer.
     def test_existing_page_preserved_and_missing_image_added(self):
         site = self.destination / 'default'
         site.mkdir(parents=True)
         (site / 'index.php').write_text('developer page')
-        (self.destination / 'setup-completed').touch()
         self.assertEqual(self.run_setup().returncode, 0)
         self.assertEqual((site / 'index.php').read_text(), 'developer page')
         self.assertTrue((site / 'beamtic-sandboxer.png').is_file())

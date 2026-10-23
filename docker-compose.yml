@@ -1,7 +1,5 @@
 volumes:
   node_modules:
-  mariadb:
-    driver: local
   hedgedoc_public:
     driver: local
 
@@ -133,8 +131,6 @@ services:
   apache2:
     ports:
       - "127.0.0.1:80:80" # Publish only on the host's IPv4 loopback interface.
-      - "127.0.0.1:443:443"
-      - "127.0.0.1:8000:8000"
     networks:
       - sandboxer
     build:

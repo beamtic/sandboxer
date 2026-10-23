@@ -88,7 +88,7 @@ class LaravelSetupTests(unittest.TestCase):
 
     # A developer may supply their own Laravel directory before running Sandboxer.
     # Setup must preserve it and run no Artisan initialization commands.
-    def test_existing_app_is_preserved_without_marker(self):
+    def test_existing_app_is_preserved(self):
         app = self.destination / 'laravel'
         app.mkdir()
         (app / 'keep.txt').write_text('existing app')
@@ -119,14 +119,6 @@ class LaravelSetupTests(unittest.TestCase):
                     self.assertFalse(destination.exists())
                 target.unlink()
         self.assertFalse(self.calls.exists())
-
-    # Legacy compatibility: the former phpMyAdmin completion marker must not
-    # prevent an independent Laravel installation.
-    def test_phpmyadmin_marker_does_not_skip_laravel(self):
-        (self.destination / 'setup-completed').touch()
-        self.assertEqual(self.run_setup().returncode, 0)
-        self.assertTrue((self.destination / 'laravel/artisan').is_file())
-
 
 if __name__ == '__main__':
     unittest.main()

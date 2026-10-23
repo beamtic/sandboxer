@@ -190,7 +190,7 @@ the intended application account.
 - Application files live in `www/`.
 - MariaDB data lives in `dbdata/`; `iedata/` is available for import/export files.
 - HedgeDoc's MariaDB database lives in `dbdata/`; uploads remain in the
-  `hedgedoc_public` named volume. Any old SQLite file there is left untouched.
+  `hedgedoc_public` named volume.
 - Apache and PHP logs live under `log/`; other service logs use `docker compose logs`.
 
 Stopping or recreating containers preserves this data. Back it up before removing

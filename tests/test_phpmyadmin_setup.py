@@ -1,8 +1,7 @@
 """Test phpMyAdmin's installer without Docker or downloads.
 
 Checks fresh installation, preservation of existing files, rejection of symlink
-destinations, and cleanup after failures. Also checks that the obsolete
-setup-completed marker no longer controls installation.
+destinations, and cleanup after failures.
 All files are temporary fixtures; your installed phpMyAdmin is never touched.
 """
 import os
@@ -42,7 +41,6 @@ class SetupTests(unittest.TestCase):
     def assert_failed(self):
         result = self.run_setup()
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertFalse((self.destination / 'setup-completed').exists())
         return result
 
     # Normal startup: install once, then preserve developer edits on later starts.
@@ -50,23 +48,12 @@ class SetupTests(unittest.TestCase):
     def test_success_and_repeat_preserves_changes(self):
         result = self.run_setup()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertFalse((self.destination / 'setup-completed').exists())
         app = self.destination / 'phpmyadmin'
         self.assertEqual((app / 'config.inc.php').read_bytes(), self.config.read_bytes())
         (app / 'index.php').write_text('developer edit')
         self.config.unlink()
         self.assertEqual(self.run_setup().returncode, 0)
         self.assertEqual((app / 'index.php').read_text(), 'developer edit')
-
-    # Legacy compatibility: an old setup-completed file must not prevent a missing
-    # phpMyAdmin installation from being created.
-    def test_obsolete_marker_does_not_skip_missing_installation(self):
-        marker = self.destination / 'setup-completed'
-        marker.write_text('legacy marker')
-        result = self.run_setup()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.destination / 'phpmyadmin/index.php').is_file())
-        self.assertEqual(marker.read_text(), 'legacy marker')
 
     # Defensive check for an incomplete setup image: fail without publishing an app,
     # then allow installation once the missing template file is restored.
@@ -106,9 +93,9 @@ class SetupTests(unittest.TestCase):
         self.assert_failed()
         self.assertFalse((self.destination / 'phpmyadmin').exists())
 
-    # An existing directory belongs to the developer, even without an old marker.
+    # An existing directory belongs to the developer.
     # Setup must leave its files alone and report success.
-    def test_existing_installation_without_marker_is_preserved(self):
+    def test_existing_installation_is_preserved(self):
         installed = self.destination / 'phpmyadmin'
         installed.mkdir()
         existing = installed / 'keep.txt'

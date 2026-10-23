@@ -14,9 +14,8 @@ keep compilers and other build-only tools out of runtime images where practical.
 `setup.dockerfile` prepares phpMyAdmin, WordPress, Laravel, and Profundarium in build stages.
 Runtime installers copy missing applications into the host-mounted `www/`.
 Existing Laravel, Profundarium, WordPress, and phpMyAdmin directories are preserved. Each
-installer stages a complete application before moving it into place; no separate
-completion marker is needed. The landing-page installer copies only
-missing files from `config/host/default/`.
+installer stages a complete application before moving it into place. The
+landing-page installer copies only missing files from `config/host/default/`.
 
 When updating pinned downloads, update the version and checksum together. Laravel's
 skeleton and `config/laravel/composer.lock` must remain compatible. Profundarium
