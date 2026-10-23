@@ -25,14 +25,6 @@ workspace remains available for clean Laravel applications.
 See README.md for setup and usage; keep personal environment history out of
 project documentation.
 
-## Pending source pin
-
-MariaDB support is implemented in the local Profundarium development checkout.
-After that code is committed and published, update `PROFUNDARIUM_REF` in
-`setup.dockerfile` and switch `profundarium.sh` plus its tests from SQLite to the
-HedgeDoc MariaDB environment settings. The current pinned upstream code lacks
-MariaDB support; do not switch fresh-install defaults ahead of the source pin.
-
 ## Remaining review candidates
 
 These are not authorization to make additional changes:

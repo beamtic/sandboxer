@@ -58,7 +58,8 @@ COPY ./config/laravel/vite.config.js ./vite.config.js
 FROM laravel-template AS profundarium-template
 RUN apk add --no-cache git
 # Main-branch snapshot for new installs; existing local checkouts are untouched.
-ARG PROFUNDARIUM_REF=7b3d8462e60be4c5c2a4b59e59bc5aa61c154b3d
+# Profundarium v0.3.0, including MySQL/MariaDB media support.
+ARG PROFUNDARIUM_REF=8605fd8923a764f54f70b1af78573846348a0d4a
 WORKDIR /opt/profundarium
 RUN git init . && git remote add origin https://github.com/beamtic/Profundarium.git \
     && git fetch --depth=1 origin "${PROFUNDARIUM_REF}" \

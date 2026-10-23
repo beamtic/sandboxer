@@ -1,4 +1,10 @@
-"""Offline checks for installing the prepared phpMyAdmin template safely."""
+"""Test phpMyAdmin's installer without Docker or downloads.
+
+Checks fresh installation, preservation of existing files, rejection of symlink
+destinations, and cleanup after failures. Also checks that the obsolete
+setup-completed marker no longer controls installation.
+All files are temporary fixtures; your installed phpMyAdmin is never touched.
+"""
 import os
 from pathlib import Path
 import subprocess
@@ -39,6 +45,8 @@ class SetupTests(unittest.TestCase):
         self.assertFalse((self.destination / 'setup-completed').exists())
         return result
 
+    # Normal startup: install once, then preserve developer edits on later starts.
+    # Even a missing source configuration must not trigger a reinstall.
     def test_success_and_repeat_preserves_changes(self):
         result = self.run_setup()
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -50,6 +58,8 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(self.run_setup().returncode, 0)
         self.assertEqual((app / 'index.php').read_text(), 'developer edit')
 
+    # Legacy compatibility: an old setup-completed file must not prevent a missing
+    # phpMyAdmin installation from being created.
     def test_obsolete_marker_does_not_skip_missing_installation(self):
         marker = self.destination / 'setup-completed'
         marker.write_text('legacy marker')
@@ -58,6 +68,8 @@ class SetupTests(unittest.TestCase):
         self.assertTrue((self.destination / 'phpmyadmin/index.php').is_file())
         self.assertEqual(marker.read_text(), 'legacy marker')
 
+    # Defensive check for an incomplete setup image: fail without publishing an app,
+    # then allow installation once the missing template file is restored.
     def test_missing_template_then_retry(self):
         index = self.template / 'index.php'
         index.unlink()
@@ -66,26 +78,36 @@ class SetupTests(unittest.TestCase):
         index.write_text('<?php\n')
         self.assertEqual(self.run_setup().returncode, 0)
 
+    # Defensive check for a missing bundled config: do not leave an apparently
+    # installed phpMyAdmin that has never received its database configuration.
     def test_missing_configuration(self):
         self.config.unlink()
         self.assert_failed()
         self.assertFalse((self.destination / 'phpmyadmin').exists())
 
+    # Simulate a failed file copy, such as a disk or permission error.
+    # The destination must remain absent so the next startup can retry.
     def test_template_copy_failure(self):
         cp = self.root / 'bin/cp'
+        # Shadow cp through PATH to simulate a failed application-file copy.
         cp.write_text('#!/bin/sh\nexit 1\n')
         cp.chmod(0o755)
         self.assert_failed()
         self.assertFalse((self.destination / 'phpmyadmin').exists())
         self.assertTrue(self.config.exists())
 
+    # Simulate failure after application files copied but before configuration did.
+    # Setup must discard that incomplete installation rather than publish it.
     def test_configuration_copy_failure(self):
         cp = self.root / 'bin/cp'
+        # Let application copying succeed, then fail only the configuration copy.
         cp.write_text('#!/bin/sh\n[ "$1" != "$PHPMYADMIN_CONFIG" ] || exit 1\nexec /bin/cp "$@"\n')
         cp.chmod(0o755)
         self.assert_failed()
         self.assertFalse((self.destination / 'phpmyadmin').exists())
 
+    # An existing directory belongs to the developer, even without an old marker.
+    # Setup must leave its files alone and report success.
     def test_existing_installation_without_marker_is_preserved(self):
         installed = self.destination / 'phpmyadmin'
         installed.mkdir()
@@ -94,11 +116,28 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(self.run_setup().returncode, 0)
         self.assertEqual(existing.read_text(), 'existing data')
 
-    def test_existing_symlink_is_preserved(self):
-        installed = self.destination / 'phpmyadmin'
-        installed.symlink_to(self.root / 'missing')
-        self.assertEqual(self.run_setup().returncode, 0)
-        self.assertTrue(installed.is_symlink())
+    # Reject a symlink at www/phpmyadmin, whether valid or broken, with a clear error.
+    # Leave both the link and its target untouched for the developer to resolve.
+    def test_destination_symlink_is_rejected(self):
+        self.destination.mkdir(exist_ok=True)
+        target = self.destination / 'phpmyadmin'
+        for name in ('missing', 'existing'):
+            with self.subTest(destination=name):
+                destination = self.root / name
+                if name == 'existing':
+                    destination.mkdir()
+                    (destination / 'keep.txt').write_text('developer files')
+                target.symlink_to(destination)
+                result = self.run_setup()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('www/phpmyadmin is a symlink', result.stderr)
+                self.assertTrue(target.is_symlink())
+                if name == 'existing':
+                    self.assertEqual(list(destination.iterdir()), [destination / 'keep.txt'])
+                    self.assertEqual((destination / 'keep.txt').read_text(), 'developer files')
+                else:
+                    self.assertFalse(destination.exists())
+                target.unlink()
 
 
 if __name__ == '__main__':

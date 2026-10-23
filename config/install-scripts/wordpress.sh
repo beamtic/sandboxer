@@ -4,8 +4,14 @@ root=${SANDBOXER_ROOT:-/srv/sandboxer}
 template=${WORDPRESS_TEMPLATE:-/opt/wordpress}
 target="$root/wordpress"
 
-# Preserve existing applications, including developer-managed symlinks.
-if [ -e "$target" ] || [ -L "$target" ]; then
+# Symlinks are not supported as installation destinations; leave removal to the user.
+if [ -L "$target" ]; then
+    echo 'www/wordpress is a symlink. Remove it or configure a bind mount before installing.' >&2
+    exit 1
+fi
+
+# Preserve existing applications; never reinstall or upgrade.
+if [ -e "$target" ]; then
     echo 'WordPress already exists; leaving it unchanged.'
     exit 0
 fi

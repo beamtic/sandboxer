@@ -73,13 +73,12 @@ docker compose exec -w /srv/sandboxer/profundarium php composer test
 HedgeDoc data is read-only in PHP. Commands that delete uploads need an
 intentional writable mount in your local Compose override.
 
-Profundarium's current development code supports MariaDB for media commands;
-note rendering uses HedgeDoc's HTTP API. Sandboxer's pinned installation snapshot
-still uses SQLite until that source pin is updated. For a checkout with MariaDB
-support, set `HEDGEDOC_DB_CONNECTION=mysql`, host `db`, and port `3306` in its
-application `.env`. Use `${HEDGEDOC_DB_NAME}`, `${HEDGEDOC_DB_USER}`, and
-`${HEDGEDOC_DB_PASSWORD}` for its database, username, and password values;
-Sandboxer's PHP container supplies these from the root `.env`.
+New installations use Profundarium v0.3.0 and connect its media commands to
+HedgeDoc's MariaDB database using the `HEDGEDOC_DB_*` settings in the root `.env`.
+Note rendering uses HedgeDoc's HTTP API. Existing checkouts are left unchanged.
+All application installers reject symlinks at their destination directories
+(`www/default`, `www/phpmyadmin`, `www/laravel`, `www/wordpress`, and
+`www/profundarium`). Use directories or explicit bind mounts instead.
 
 ## Developing a Laravel application
 

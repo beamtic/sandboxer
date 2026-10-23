@@ -5,8 +5,14 @@ destination=${SANDBOXER_ROOT:-/srv/sandboxer}
 configuration=${PHPMYADMIN_CONFIG:-/config.inc.php}
 template=${PHPMYADMIN_TEMPLATE:-/opt/phpmyadmin}
 
+# Symlinks are not supported as installation destinations; leave removal to the user.
+if [ -L "$destination/phpmyadmin" ]; then
+    echo 'www/phpmyadmin is a symlink. Remove it or configure a bind mount before installing.' >&2
+    exit 1
+fi
+
 # Existing applications belong to the developer; never reinstall or upgrade.
-if [ -e "$destination/phpmyadmin" ] || [ -L "$destination/phpmyadmin" ]; then
+if [ -e "$destination/phpmyadmin" ]; then
     echo "phpMyAdmin already exists; leaving it unchanged."
     exit 0
 fi
