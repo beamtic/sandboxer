@@ -37,6 +37,8 @@ to your hosts file with address `127.0.0.1`.
 
 The local HedgeDoc account is `sandboxer@sandboxer.localhost`, with password
 `localuserpassword`. Setup creates it if missing and preserves existing passwords.
+`HEDGEDOC_SESSION_SECRET` keeps logins valid across HedgeDoc restarts; its default
+is development-only. Changing it invalidates existing sessions.
 
 The `setup`, `wordpress-db-setup`, `hedgedoc-db-setup`, and `hedgedoc-setup` services finish and exit successfully; this is
 normal. If startup fails, check:

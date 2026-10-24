@@ -166,6 +166,7 @@ services:
       CMD_DB_USERNAME: ${HEDGEDOC_DB_USER:?Set HEDGEDOC_DB_USER in .env}
       CMD_DB_PASSWORD: ${HEDGEDOC_DB_PASSWORD:?Set HEDGEDOC_DB_PASSWORD in .env}
       CMD_DOMAIN: hedgedoc.localhost
+      CMD_SESSION_SECRET: ${HEDGEDOC_SESSION_SECRET:-sandboxer-local-development-session-secret}
       CMD_HOST: 0.0.0.0
       CMD_PROTOCOL_USESSL: "false"
       CMD_URL_ADDPORT: "false"
