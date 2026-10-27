@@ -2,7 +2,7 @@
 
 Sandboxer is a Docker Compose workshop for local web development with Apache,
 PHP-FPM, MariaDB, and phpMyAdmin. It includes WordPress, a clean Laravel application, and
-Profundarium alongside [our HedgeDoc fork](https://github.com/Turbulentarius/hedgedoc)
+Profundarium alongside [our HedgeDoc fork](https://github.com/Turbulentarius/Profundarium-HedgeDoc-Fork)
 for editing and publishing Markdown notes.
 
 This environment is for local development, not production. Published ports bind
@@ -49,6 +49,11 @@ docker compose logs --tail=50 setup hedgedoc-setup db php apache2 hedgedoc
 
 Stop the environment with `docker compose stop`. Start it again with
 `docker compose up -d`.
+
+HedgeDoc is built from the explicit `HEDGEDOC_REF` in `hedgedoc.dockerfile`;
+edits in `www/hedgedoc` are not mounted into the running app. After pushing a
+fork change, update that ref and run `docker compose up -d --build --no-deps hedgedoc`
+to rebuild its assets and recreate the service while preserving its data.
 
 ## Developing Profundarium
 

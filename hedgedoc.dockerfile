@@ -1,9 +1,9 @@
 FROM node:24.21.0-alpine3.24 AS build
 # Native modules are built against the same Alpine/musl runtime used below.
 RUN apk add --no-cache git python3 make g++
-ARG HEDGEDOC_REF=90212dc04003741393d19b2c90a4cba2f81b8a7b
+ARG HEDGEDOC_REF=fe0bbec6170d21165b20f685c985d4fdd313815e
 WORKDIR /hedgedoc
-RUN git init . && git remote add origin https://github.com/Turbulentarius/hedgedoc.git \
+RUN git init . && git remote add origin https://github.com/Turbulentarius/Profundarium-HedgeDoc-Fork.git \
     && git fetch --depth=1 origin "${HEDGEDOC_REF}" && git checkout --detach FETCH_HEAD
 ENV npm_config_nodedir=/usr/local
 RUN node .yarn/releases/yarn-4.13.0.cjs install --immutable

@@ -172,7 +172,7 @@ services:
       CMD_URL_ADDPORT: "false"
       CMD_IMAGE_UPLOAD_TYPE: filesystem
       CMD_ENABLE_UPLOADS: all
-      CMD_SOURCE_URL: https://github.com/Turbulentarius/hedgedoc
+      CMD_SOURCE_URL: https://github.com/Turbulentarius/Profundarium-HedgeDoc-Fork
       CMD_PORT: "3000"
     volumes:
       - hedgedoc_public:/data
