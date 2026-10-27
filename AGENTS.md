@@ -1,252 +1,71 @@
-# Repository Guidelines
-
-## Purpose
-
-Sandboxer is a generic Docker Compose environment for local web development.
-
-It is intended as a reusable base for developing applications locally. Production deployments use separate, project-specific containers.
-
-Keep Sandboxer generic, small, simple, reproducible, and easy to extend.
-
-Do not turn it into a production deployment environment.
-
-## Priorities
-
-Prioritize:
-
-1. correctness
-2. small and minimal images
-3. simple architecture
-4. maintainability
-5. reproducibility
-6. sensible local security
-7. developer usability
-8. flexibility
-9. debugging convenience
-
-Avoid unnecessary abstractions, dependencies, services, and tooling.
-
-## Alpine-first images
-
-Prefer official or well-maintained Alpine-based images by default.
-
-If Alpine is unsuitable, explain why before recommending another base image.
-
-When evaluating software, consider:
-
-* musl vs glibc compatibility
-* Alpine package availability
-* precompiled binaries
-* native dependencies
-* GNU-specific assumptions
-* Bash-specific assumptions
-
-Prefer minimal runtime images.
-
-Remove build-only dependencies, package caches, temporary files, compilers, headers, and other unnecessary tooling from finished images.
-
-Use temporary build dependencies or multi-stage builds when they provide a meaningful benefit.
-
-Do not sacrifice simplicity for trivial image-size reductions.
-
-## Debugging
-
-Debugging convenience is secondary to keeping the normal images small.
-
-Do not permanently install debugging or profiling tools unless they provide recurring value.
-
-When additional debugging software is required, explain:
-
-* what is required
-* whether it works with Alpine
-* whether musl or glibc compatibility is relevant
-* whether it should be temporary, optional, or permanent
-
-Prefer temporary packages, Compose overrides, profiles, separate debug images, or alternative build targets over bloating the normal image.
-
-Do not switch away from Alpine merely because debugging would be easier.
-
-## Architecture
-
-Keep the environment generic rather than tied to Laravel, Symfony, WordPress, or another framework.
-
-Prefer straightforward Dockerfiles and Docker Compose configuration over additional infrastructure.
-
-Avoid kitchen-sink containers.
-
-Keep optional or project-specific functionality isolated where practical through:
-
-* separate services
-* Compose profiles
-* overrides
-* alternative build targets
-* documented extensions
-
-Do not introduce Kubernetes, production orchestration, or deployment infrastructure unless explicitly requested.
-
-## Project structure
-
-`docker-compose.yml` defines the development environment.
-
-Root-level `*.dockerfile` files build local images.
-
-Configuration lives primarily under `config/`.
-
-Application code and assets live under the ignored `www/` directory.
-
-Local database data, import/export data, and logs live under directories such as:
-
-* `dbdata/`
-* `iedata/`
-* `log/`
-
-Do not commit generated data or logs.
-
-## Scope and context efficiency
-
-Inspect only files relevant to the current task.
-
-Do not perform repository-wide scans, recursive directory listings, or broad searches unless explicitly requested.
-
-Do not inspect, search, enumerate, summarize, or modify `www/`, `dbdata/`, `iedata/`, or `log/` unless the current task explicitly requires one of those directories.
-
-Treat these directories as out of scope by default.
-
-Content under `www/` belongs to applications developed with Sandboxer rather than to Sandboxer itself.
-
-The remaining excluded directories primarily contain local runtime data.
-
-When a task requires something under one of these directories, inspect only the specific subdirectory or files necessary for that task.
-
-Prefer targeted file reads and searches over broad repository exploration.
-
-Do not read documentation, configuration, or source files merely to gather general context. Read them when they are relevant to the current task.
-
-## Branch workflow
-
-Use `develop` for future Sandboxer code changes and commits. Do not create
-feature branches for routine work unless requested.
-
-Before editing, check the current branch, working tree, and whether `develop`
-contains the latest main changes. Preserve existing work when switching branches;
-never discard it or force-push to resolve a mismatch.
-
-Push Sandboxer changes only to `origin develop` unless the user explicitly
-requests another target. Main is normally updated through a pull request.
-Explicit permission for one main-branch commit or push is a one-time exception,
-not permission to use main for later work. Commit, push, merge, and release only
-when requested.
-
-These rules apply to Sandboxer's repository. Applications under `www/` have
-their own repositories and branch instructions (Profundarium uses `development`).
-
-## Working rules
-
-Before changing behavior, inspect only the files and configuration relevant to the change.
-
-Depending on the task, this may include:
-
-* Compose configuration
-* Dockerfiles
-* configuration files
-* setup scripts
-* volumes
-* networking
-* README
-
-Understand existing behavior before replacing it.
-
-Prefer incremental changes over broad rewrites.
-
-Distinguish between:
-
-* bugs
-* security issues
-* outdated dependencies
-* portability problems
-* Alpine compatibility problems
-* unnecessary image size
-* maintainability problems
-* developer-experience improvements
-* stylistic preferences
-
-Do not present stylistic preferences as technical requirements.
-
-Before substantial architectural changes, explain:
-
-1. the problem
-2. the proposed solution
-3. important tradeoffs
-4. Alpine compatibility
-5. relevant image-size impact
-
-Challenge assumptions when there is a concrete technical reason.
-
-## Dependencies
-
-Evaluate important dependencies based on:
-
-* upstream support
-* security support
-* compatibility
-* Alpine support
-* image size
-* maintenance cost
-
-Do not upgrade something merely because a newer version exists.
-
-Use current authoritative documentation when support status or compatibility may have changed.
-
-## Security
-
-Sandboxer is development-only, but avoid unnecessary risks to the host.
-
-Pay particular attention to:
-
-* privileged containers
-* unnecessary Linux capabilities
-* Docker socket access
-* dangerous volume mounts
-* unnecessary host port exposure
-* services exposed beyond localhost without reason
-* committed real secrets
-
-Simple development credentials are acceptable when clearly development-only.
-
-## Validation
-
-Use appropriate validation after changes.
-
-Common checks include:
-
-* `docker compose config`
-* `docker compose build`
-* `docker compose up`
-* `docker compose ps -a`
-* relevant `docker compose logs` commands
-* service connectivity checks
-* image-size comparisons when relevant
-
-Run only the validation relevant to the change unless broader validation is explicitly requested or technically necessary.
-
-Avoid destructive Docker cleanup commands.
-
-Never delete unrelated containers, images, volumes, or user data.
-
-## Documentation
-
-Keep `README.md` consistent with actual behavior.
-
-Update documentation when commands, URLs, prerequisites, configuration, dependencies, or user-visible behavior change.
-
-Document important Alpine limitations and optional debugging requirements.
-
-Avoid unnecessary Docker tutorials.
-
-## Guiding principle
-
-Sandboxer is a lightweight generic workshop for building web applications.
-
-Keep the normal environment small and simple.
-
-Add specialized tooling only when it is actually needed.
+# Sandboxer repository guidelines
+
+Sandboxer is a Docker Compose workshop for local web development, not a
+production deployment. Keep it generic, small, reproducible, and easy to
+extend. Prefer straightforward Compose services and Alpine-based images; use
+extra dependencies or services only when they provide clear recurring value.
+
+## Current architecture
+
+[`docker-compose.yml`](/home/captain/Work/sandboxer/docker-compose.yml) runs:
+
+- Apache and PHP-FPM for the shared `www/` tree.
+- MariaDB with separate Sandboxer, WordPress, and HedgeDoc databases/accounts.
+- One-shot setup services that create missing application directories and
+  database accounts without replacing existing application checkouts.
+- The pinned Turbulentarius HedgeDoc 1.x fork, built by
+  [`hedgedoc.dockerfile`](/home/captain/Work/sandboxer/hedgedoc.dockerfile).
+- Profundarium, WordPress, Laravel, and phpMyAdmin under the local virtual hosts.
+- An optional `frontend` profile running Node against `www/${APP_PATH}`.
+
+Published ports bind to `127.0.0.1`. Application files under `www/` and runtime
+data under `dbdata/`, `iedata/`, and `log/` are local or nested-repository
+content, not Sandboxer source. Do not inspect or modify them unless the task
+requires it. The HedgeDoc fork has its own instructions in
+[`www/hedgedoc/AGENTS.md`](/home/captain/Work/sandboxer/www/hedgedoc/AGENTS.md).
+
+HedgeDoc uses the shared MariaDB service and the named `hedgedoc_public` volume
+for uploads and built public assets. Keep the stable `CMD_SESSION_SECRET`
+wiring intact: it preserves sessions across restarts, while changing it
+intentionally logs users out. Keep the image pinned to an explicit fork ref.
+
+## Changes and dependencies
+
+Before changing behavior, inspect the relevant Compose service, Dockerfile,
+configuration, setup script, and README section. Prefer a focused change over
+new abstraction or infrastructure. Keep build-only packages out of runtime
+images and preserve Alpine/musl compatibility.
+
+Keep [`README.md`](/home/captain/Work/sandboxer/README.md) aligned with URLs,
+commands, prerequisites, configuration, and user-visible behavior. Do not
+commit real credentials, generated data, logs, or application dependencies.
+Development credentials in `.env.example` are acceptable when clearly local.
+
+## Branch and repository workflow
+
+Use `develop` for Sandboxer changes. Preserve unrelated working-tree changes;
+never reset, force-push, or create a routine feature branch. Commit, push,
+merge, and release only when explicitly requested. Push Sandboxer changes only
+to `origin develop` unless another target is requested.
+
+`www/` contains independent application repositories. Follow their local
+instructions and branches; do not commit their changes from the Sandboxer
+repository. In particular, HedgeDoc changes belong in its nested repository,
+while Compose integration belongs here.
+
+## Validation and safety
+
+Run the smallest relevant checks. For Compose or environment changes, normally
+use:
+
+```sh
+docker compose config
+docker compose ps -a
+docker compose logs --tail=50 <service>
+```
+
+Build or start services only when the change requires it. Do not use
+`docker compose down -v`, delete volumes, remove images, or otherwise destroy
+local application or database data without explicit instruction. Check exposed
+ports, mounts, capabilities, credentials, and Docker socket access when
+reviewing security-sensitive changes.
